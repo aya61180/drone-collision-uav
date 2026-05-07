@@ -1,4 +1,4 @@
-/*
+ /*
  * ============================================================
  *  PROJET INDUSTRIEL : Système de Collision pour Essaim UAV
  *  École des Sciences de l'Information
@@ -150,8 +150,7 @@ void quicksortX(Drone *debut, Drone *fin) {
  * Paramètres :
  *   bande : tableau de pointeurs vers les drones de la bande
  *   taille : nombre de drones dans la bande
- */
-void triBandeZ(Drone **bande, int taille) {
+ */void triBandeZ(Drone **bande, int taille) {
     int i, j;
     for (i = 1; i < taille; i++) {
         Drone *cle = *(bande + i);
@@ -164,6 +163,7 @@ void triBandeZ(Drone **bande, int taille) {
         *(bande + j + 1) = cle;
     }
 }
+
 
 
 /* ============================================================
@@ -234,7 +234,79 @@ PairResult forceBrute(Drone *debut, int taille) {
  *
  * Retourne : PairResult mis à jour si une paire plus proche est trouvée
  */
+PairResult verifierBande(Drone *debut, int n, float xMilieu, PairResult meilleur) {
 
+    /* === Étape 1 : Collecter les drones dans la bande de largeur 2δ === */
+
+    /*
+     * Allouer un tableau de pointeurs pour les drones de la bande.
+     * Au pire cas, tous les drones sont dans la bande.
+     */
+    Drone **bande = (Drone **)malloc(n * sizeof(Drone *));
+    if (bande == NULL) {
+        printf("Erreur allocation bande\n");
+        return meilleur;
+    }
+
+    int taillebande = 0;
+    Drone *ptr = debut;
+
+    /* Parcourir tous les drones et sélectionner ceux dans la bande */
+    while (ptr < debut + n) {
+        /* Un drone est dans la bande si sa distance à xMilieu est < δ */
+        float distX = ptr->x - xMilieu;
+        if (distX < 0) distX = -distX;  /* Valeur absolue sans fabsf */
+
+        if (distX < meilleur.dist) {
+            /* Ajouter ce drone à la bande (via pointeur) */
+            *(bande + taillebande) = ptr;
+            taillebande++;
+        }
+        ptr++;
+    }
+
+    /* === Étape 2 : Trier la bande par coordonnée Z === */
+
+    /*
+     * On trie par Z pour pouvoir arrêter les comparaisons dès que
+     * la différence de Z dépasse δ (optimisation clé).
+     */
+    triBandeZ(bande, taillebande);
+
+    /* === Étape 3 : Comparer chaque drone aux 7 suivants au maximum === */
+
+    /*
+     * THÉORÈME FONDAMENTAL :
+     * Dans un rectangle de dimensions (δ × 2δ), on ne peut placer
+     * que 8 points à distance mutuelle ≥ δ.
+     * Donc chaque drone de la bande n'a AU PLUS 7 voisins à vérifier.
+     * → Complexité totale de cette étape : O(n)
+     */
+    int i;
+    for (i = 0; i < taillebande; i++) {
+        int j;
+        for (j = i + 1; j < taillebande && j < i + 8; j++) {
+            Drone *di = *(bande + i);
+            Drone *dj = *(bande + j);
+
+            /* Optimisation : si la différence Z seule dépasse δ, arrêter */
+            float diffZ = dj->z - di->z;
+            if (diffZ >= meilleur.dist) break;
+
+            float d = distance3D(di, dj);
+            if (d < meilleur.dist) {
+                meilleur.dist = d;
+                meilleur.d1   = di;
+                meilleur.d2   = dj;
+            }
+        }
+    }
+
+    /* Libérer la mémoire temporaire de la bande */
+    free(bande);
+
+    return meilleur;
+}
 
 
 /* ============================================================
@@ -467,3 +539,4 @@ int main(void) {
  *    → Gain vs naïf     : 50 000 000 ops  →  ~1 800 000 ops
  * ============================================================
  */
+

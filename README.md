@@ -1,31 +1,40 @@
-# Projet Industriel : Système de Collision pour Essaim Autonome (UAV)
+ Drone Collision Detection — UAV Swarm
 
-**Auteur :** Aya Kourti  
-**Institution :** École des Sciences de l'Information (ESI)  
-**Encadrant :** Pr. Tarik HOUICHIME  
+** Aya Kourti
+ESI Rabat
+Pr. Tarik HOUICHIME
 
 ---
 
-##  Description du Projet
+ Description
 
-Ce projet industriel a pour but de concevoir un algorithme embarqué en langage C permettant d'identifier instantanément les deux drones les plus proches dans un essaim de 10 000 unités. L'objectif est d'éviter les collisions en vol en temps réel (prévention de crash en chaîne) tout en respectant des contraintes matérielles strictes.
+Algorithme en C qui détecte les **2 drones les plus proches** parmi 10 000 drones en temps réel.
 
-##  Cahier des Charges & Contraintes
+##  Pourquoi pas la double boucle ?
 
-* **Topologie de la donnée :** Utilisation d'une structure hétérogène `struct Drone` contenant un identifiant et des coordonnées spatiales en virgule flottante 3D (x, y, z).
-* **Gestion de la mémoire :** Allocation dynamique contiguë via `malloc`.
-* **Sécurité & Compilation :** L'utilisation des crochets d'indexation (`[]`) est strictement interdite. Toutes les manipulations se font via l'arithmétique pure des pointeurs.
+| Méthode | Complexité | Résultat |
+|---|---|---|
+| Double boucle | O(n²) | ❌ 50M opérations — Timeout |
+| **Divide & Conquer** | **O(n log²n)** | **✅ 1.8M opérations** |
 
-## Livrables de l'Ingénieur
+## 🔧 Algorithme
 
-### 1. Code Source Industriel
-Le code source est disponible dans le fichier `drone_collision.c`. Il implémente le calcul de la distance euclidienne en $O(n^2)$ :
+```
+1. Trier par X      →  QuickSort       O(n log n)
+2. Diviser          →  Moitié G / D    O(1)
+3. Conquérir        →  Récursion       O(n log²n)
+4. Bande centrale   →  Vérifier δ      O(n)
+```
 
-$$T(n) = \frac{n(n-1)}{2} \in O(n^2)$$
+##  Contraintes
 
-### 2. Conception Technique
-* Optimisation des calculs de distance grâce à la fonction mathématique `sqrtf`.
-* Utilisation des pointeurs pour parcourir la mémoire contiguë sans indexation.
+- Aucun crochet `[]` — pointeurs uniquement
+- Allocation dynamique `malloc`
+- Code entièrement commenté
 
-### 3. Audit Asymptotique et Preuve
-Pour un volume de $N = 10 000$ drones, le nombre de calculs est de l'ordre de $5 \times 10^7$ opérations, optimisé pour s'exécuter dans les délais du processeur embarqué.
+## Compilation
+
+```bash
+gcc -O2 -o drone drone_collision.c -lm
+./drone
+```

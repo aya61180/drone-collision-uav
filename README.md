@@ -19,7 +19,7 @@ Algorithme en C qui détecte les **2 drones les plus proches** parmi 10 000 dron
 | Double boucle | O(n²) |  50M opérations — Timeout |
 | **Divide & Conquer** | **O(n log²n)** | ** 1.8M opérations** |
 
-## 🔧 Algorithme
+##  Algorithme
 
 ```
 1. Trier par X      →  QuickSort       O(n log n)

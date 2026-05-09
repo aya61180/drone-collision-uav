@@ -1,5 +1,4 @@
- /*
- * ============================================================
+/* ============================================================
  *  PROJET INDUSTRIEL : Système de Collision pour Essaim UAV
  *  École des Sciences de l'Information
  *  Pr. Tarik HOUICHIME
@@ -21,11 +20,11 @@
 #include <float.h>
 
 /* ============================================================
- *  STRUCTURE DE DONNÉES
+ *  STRUCTURES DE DONNÉES
  * ============================================================ */
 
 /*
- * Structure représentant un drone dans l'espace 3D.
+ * Représente un drone dans l'espace 3D.
  * Chaque drone possède un identifiant unique et ses coordonnées.
  */
 typedef struct {
@@ -36,13 +35,13 @@ typedef struct {
 } Drone;
 
 /*
- * Structure résultat contenant la paire de drones la plus proche.
+ * Résultat contenant la paire de drones la plus proche.
  * Retournée par les fonctions récursives.
  */
 typedef struct {
-    Drone *d1;      /* Pointeur vers le premier drone de la paire  */
-    Drone *d2;      /* Pointeur vers le second drone de la paire   */
-    float  dist;    /* Distance minimale entre les deux drones      */
+    Drone *d1;   /* Pointeur vers le premier drone de la paire */
+    Drone *d2;   /* Pointeur vers le second drone de la paire  */
+    float  dist; /* Distance minimale entre les deux drones    */
 } PairResult;
 
 
@@ -80,36 +79,27 @@ void swapDrones(Drone *a, Drone *b) {
 
 /*
  * Partition du tableau autour d'un pivot (valeur X du dernier élément).
- * Tous les éléments dont X < pivot vont à gauche,
- * tous les éléments dont X >= pivot vont à droite.
+ * Tous les éléments dont X <= pivot vont à gauche,
+ * tous les éléments dont X > pivot vont à droite.
  *
  * Paramètres :
- *   debut  : pointeur vers le premier drone du sous-tableau
- *   fin    : pointeur vers le dernier drone du sous-tableau
+ *   debut : pointeur vers le premier drone du sous-tableau
+ *   fin   : pointeur vers le dernier drone du sous-tableau
  *
  * Retourne : pointeur vers la position finale du pivot
  */
 Drone *partition(Drone *debut, Drone *fin) {
-    /* Le pivot est le dernier élément du sous-tableau */
-    float pivotX = fin->x;
+    float  pivotX = fin->x;
+    Drone *i      = debut - 1;
+    Drone *j      = debut;
 
-    /*
-     * i pointe vers la "frontière gauche" :
-     * tout ce qui est à gauche de i a un X <= pivotX
-     */
-    Drone *i = debut - 1;
-    Drone *j = debut;
-
-    /* Parcours du sous-tableau sans crochets */
     while (j < fin) {
         if (j->x <= pivotX) {
-            i++;                  /* Avancer la frontière */
-            swapDrones(i, j);     /* Placer l'élément à gauche */
+            i++;
+            swapDrones(i, j);
         }
         j++;
     }
-
-    /* Placer le pivot à sa position définitive */
     swapDrones(i + 1, fin);
     return i + 1;
 }
@@ -124,13 +114,8 @@ Drone *partition(Drone *debut, Drone *fin) {
  */
 void quicksortX(Drone *debut, Drone *fin) {
     if (debut < fin) {
-        /* Trouver la position du pivot */
         Drone *pivot = partition(debut, fin);
-
-        /* Trier récursivement la moitié gauche */
         quicksortX(debut, pivot - 1);
-
-        /* Trier récursivement la moitié droite */
         quicksortX(pivot + 1, fin);
     }
 }
@@ -139,23 +124,23 @@ void quicksortX(Drone *debut, Drone *fin) {
 /* ============================================================
  *  TRI PAR INSERTION PAR AXE Z
  *  — Utilisé pour trier la bande centrale (petite taille)
- *  — Complexité : O(k²) avec k très petit (~7 au maximum)
+ *  — Complexité : O(k²) avec k ≤ 7 en pratique → O(1)
  * ============================================================ */
 
 /*
  * Trie un tableau de pointeurs vers des drones par coordonnée Z.
- * Ce tri est utilisé uniquement pour la bande centrale δ,
- * qui contient toujours très peu de drones (≤ 7 théoriquement).
+ * Utilisé uniquement pour la bande centrale δ, qui contient
+ * toujours très peu de drones (≤ 7 théoriquement).
  *
  * Paramètres :
- *   bande : tableau de pointeurs vers les drones de la bande
+ *   bande  : tableau de pointeurs vers les drones de la bande
  *   taille : nombre de drones dans la bande
- */void triBandeZ(Drone **bande, int taille) {
+ */
+void triBandeZ(Drone **bande, int taille) {
     int i, j;
     for (i = 1; i < taille; i++) {
         Drone *cle = *(bande + i);
         j = i - 1;
-        /* Décaler les éléments plus grands vers la droite */
         while (j >= 0 && (*(bande + j))->z > cle->z) {
             *(bande + j + 1) = *(bande + j);
             j--;
@@ -163,7 +148,6 @@ void quicksortX(Drone *debut, Drone *fin) {
         *(bande + j + 1) = cle;
     }
 }
-
 
 
 /* ============================================================
@@ -174,8 +158,6 @@ void quicksortX(Drone *debut, Drone *fin) {
 
 /*
  * Trouve la paire la plus proche parmi 2 ou 3 drones (force brute).
- * Ce cas de base arrête la récursion et est appelé très fréquemment
- * sur de tout petits sous-tableaux.
  *
  * Paramètres :
  *   debut  : pointeur vers le premier drone du groupe
@@ -185,11 +167,10 @@ void quicksortX(Drone *debut, Drone *fin) {
  */
 PairResult forceBrute(Drone *debut, int taille) {
     PairResult res;
-    res.dist = FLT_MAX;  /* Initialiser avec la distance maximale possible */
+    res.dist = FLT_MAX;
     res.d1   = NULL;
     res.d2   = NULL;
 
-    /* Comparer chaque paire — au plus 3 paires pour taille=3 */
     Drone *i_ptr = debut;
     while (i_ptr < debut + taille) {
         Drone *j_ptr = i_ptr + 1;
@@ -217,48 +198,50 @@ PairResult forceBrute(Drone *debut, int taille) {
 /*
  * Vérifie si une paire plus proche existe à cheval sur la ligne de coupe.
  *
- * EXPLICATION :
- * Après avoir trouvé δ = min(δ_gauche, δ_droite),
- * seuls les drones dont la distance à la ligne de coupe est < δ
- * peuvent potentiellement former une paire plus proche.
- * On les collecte dans une "bande" de largeur 2δ centrée sur la ligne.
+ * PRINCIPE :
+ * Après avoir trouvé δ = min(δ_gauche, δ_droite), seuls les drones
+ * dont la distance à la ligne de coupe est < δ peuvent former une
+ * paire plus proche. On les collecte dans une bande de largeur 2δ.
  *
- * THÉORÈME : Dans cette bande triée par Z, chaque drone
- * ne doit être comparé qu'aux 7 drones suivants au maximum.
+ * THÉORÈME : Dans cette bande triée par Z, chaque drone ne doit
+ * être comparé qu'aux 7 drones suivants au maximum.
+ * → Complexité totale de cette étape : O(n)
+ *
+ * CORRECTION 3D : On filtre sur X ET sur Y pour éviter d'inclure
+ * des drones éloignés sur l'axe Y qui ne peuvent pas être la paire
+ * la plus proche.
  *
  * Paramètres :
- *   debut      : pointeur vers le début du tableau trié par X
- *   n          : nombre de drones
- *   xMilieu    : coordonnée X de la ligne de coupe
- *   meilleur   : meilleur résultat trouvé jusqu'ici (δ)
+ *   debut    : pointeur vers le début du tableau trié par X
+ *   n        : nombre de drones
+ *   xMilieu  : coordonnée X de la ligne de coupe
+ *   yMilieu  : coordonnée Y du milieu de l'essaim
+ *   meilleur : meilleur résultat trouvé jusqu'ici (δ)
  *
  * Retourne : PairResult mis à jour si une paire plus proche est trouvée
  */
-PairResult verifierBande(Drone *debut, int n, float xMilieu, PairResult meilleur) {
+PairResult verifierBande(Drone *debut, int n, float xMilieu,
+                         float yMilieu, PairResult meilleur) {
 
-    /* === Étape 1 : Collecter les drones dans la bande de largeur 2δ === */
+    /* === Étape 1 : Collecter les drones dans la bande 2D (X et Y) === */
 
-    /*
-     * Allouer un tableau de pointeurs pour les drones de la bande.
-     * Au pire cas, tous les drones sont dans la bande.
-     */
     Drone **bande = (Drone **)malloc(n * sizeof(Drone *));
     if (bande == NULL) {
         printf("Erreur allocation bande\n");
         return meilleur;
     }
 
-    int taillebande = 0;
-    Drone *ptr = debut;
+    int    taillebande = 0;
+    Drone *ptr         = debut;
 
-    /* Parcourir tous les drones et sélectionner ceux dans la bande */
     while (ptr < debut + n) {
-        /* Un drone est dans la bande si sa distance à xMilieu est < δ */
         float distX = ptr->x - xMilieu;
-        if (distX < 0) distX = -distX;  /* Valeur absolue sans fabsf */
+        float distY = ptr->y - yMilieu;
+        if (distX < 0) distX = -distX;
+        if (distY < 0) distY = -distY;
 
-        if (distX < meilleur.dist) {
-            /* Ajouter ce drone à la bande (via pointeur) */
+        /* Un drone est dans la bande si sa distance sur X ET Y est < δ */
+        if (distX < meilleur.dist && distY < meilleur.dist) {
             *(bande + taillebande) = ptr;
             taillebande++;
         }
@@ -267,10 +250,6 @@ PairResult verifierBande(Drone *debut, int n, float xMilieu, PairResult meilleur
 
     /* === Étape 2 : Trier la bande par coordonnée Z === */
 
-    /*
-     * On trie par Z pour pouvoir arrêter les comparaisons dès que
-     * la différence de Z dépasse δ (optimisation clé).
-     */
     triBandeZ(bande, taillebande);
 
     /* === Étape 3 : Comparer chaque drone aux 7 suivants au maximum === */
@@ -286,11 +265,11 @@ PairResult verifierBande(Drone *debut, int n, float xMilieu, PairResult meilleur
     for (i = 0; i < taillebande; i++) {
         int j;
         for (j = i + 1; j < taillebande && j < i + 8; j++) {
-            Drone *di = *(bande + i);
-            Drone *dj = *(bande + j);
+            Drone *di   = *(bande + i);
+            Drone *dj   = *(bande + j);
+            float  diffZ = dj->z - di->z;
 
             /* Optimisation : si la différence Z seule dépasse δ, arrêter */
-            float diffZ = dj->z - di->z;
             if (diffZ >= meilleur.dist) break;
 
             float d = distance3D(di, dj);
@@ -302,9 +281,7 @@ PairResult verifierBande(Drone *debut, int n, float xMilieu, PairResult meilleur
         }
     }
 
-    /* Libérer la mémoire temporaire de la bande */
     free(bande);
-
     return meilleur;
 }
 
@@ -319,7 +296,7 @@ PairResult verifierBande(Drone *debut, int n, float xMilieu, PairResult meilleur
  *
  * PRINCIPE (Divide & Conquer) :
  *   1. CAS DE BASE  : si n ≤ 3, utiliser la force brute
- *   2. DIVISER      : couper le tableau en deux moitiés (gauche/droite par X)
+ *   2. DIVISER      : couper le tableau en deux moitiés par X
  *   3. CONQUÉRIR    : résoudre chaque moitié récursivement
  *   4. COMBINER     : trouver δ = min(δ_gauche, δ_droite),
  *                     puis vérifier la bande centrale de largeur 2δ
@@ -342,26 +319,26 @@ PairResult closestPair(Drone *debut, int n) {
     int milieu = n / 2;
 
     /*
-     * xMilieu est la coordonnée X du drone médian.
-     * C'est la "ligne de coupe" verticale qui sépare les deux moitiés.
-     * On utilise l'arithmétique de pointeurs : (debut + milieu)->x
+     * xMilieu : coordonnée X du drone médian (ligne de coupe verticale)
+     * yMilieu : coordonnée Y moyenne pour filtrer la bande en 3D
      */
     float xMilieu = (debut + milieu)->x;
 
+    /* Calcul de yMilieu : moyenne des Y de tout le sous-tableau */
+    float ySum = 0.0f;
+    int   k;
+    for (k = 0; k < n; k++) {
+        ySum += (debut + k)->y;
+    }
+    float yMilieu = ySum / (float)n;
+
     /* === ÉTAPE CONQUÉRIR : résoudre les deux moitiés === */
 
-    /* Résoudre la moitié gauche [debut .. debut+milieu-1] */
     PairResult gauche = closestPair(debut, milieu);
-
-    /* Résoudre la moitié droite [debut+milieu .. debut+n-1] */
     PairResult droite = closestPair(debut + milieu, n - milieu);
 
     /* === ÉTAPE COMBINER : garder le meilleur des deux === */
 
-    /*
-     * δ = distance minimale trouvée dans les deux moitiés.
-     * On ne garde qu'un seul résultat (le meilleur).
-     */
     PairResult meilleur;
     if (gauche.dist <= droite.dist) {
         meilleur = gauche;
@@ -372,9 +349,8 @@ PairResult closestPair(Drone *debut, int n) {
     /*
      * VÉRIFICATION DE LA BANDE CENTRALE :
      * La paire la plus proche pourrait être à cheval sur la ligne de coupe.
-     * On vérifie uniquement les drones dans la bande [xMilieu-δ, xMilieu+δ].
      */
-    meilleur = verifierBande(debut, n, xMilieu, meilleur);
+    meilleur = verifierBande(debut, n, xMilieu, yMilieu, meilleur);
 
     return meilleur;
 }
@@ -402,15 +378,15 @@ void manouvreEvitement(Drone *a, Drone *b, float seuil) {
                d, seuil);
 
         /* Manœuvre : séparer les deux drones verticalement */
-        a->z += 3.0f;   /* Drone A monte de 3 unités  */
-        b->z -= 3.0f;   /* Drone B descend de 3 unités */
+        a->z += 3.0f;
+        b->z -= 3.0f;
 
         printf("  Manœuvre effectuée : Drone #%d → altitude +3  |"
                "  Drone #%d → altitude -3\n", a->id, b->id);
         printf("  Nouvelle distance estimée : %.4f m\n", distance3D(a, b));
     } else {
-        printf("Situation nominale — Distance minimale : %.4f m (seuil : %.1f m)\n",
-               d, seuil);
+        printf("Situation nominale — Distance minimale : %.4f m"
+               " (seuil : %.1f m)\n", d, seuil);
     }
 }
 
@@ -421,7 +397,6 @@ void manouvreEvitement(Drone *a, Drone *b, float seuil) {
 
 int main(void) {
 
-    /* Nombre de drones dans l'essaim */
     int n = 10000;
 
     printf("============================================================\n");
@@ -430,13 +405,9 @@ int main(void) {
 
     /* -------------------------------------------------------
      *  ÉTAPE 1 : Allocation dynamique de l'essaim sur le tas
+     *  — Accès UNIQUEMENT via arithmétique de pointeurs
+     *  — Aucun crochet [] n'est utilisé
      * ------------------------------------------------------- */
-
-    /*
-     * On alloue un bloc continu de n structures Drone.
-     * L'accès se fera UNIQUEMENT via arithmétique de pointeurs.
-     * Aucun crochet [] n'est utilisé.
-     */
     Drone *essaim = (Drone *)malloc(n * sizeof(Drone));
 
     if (essaim == NULL) {
@@ -448,14 +419,10 @@ int main(void) {
 
     /* -------------------------------------------------------
      *  ÉTAPE 2 : Initialisation des drones (positions aléatoires)
+     *  — Espace de 1000 × 1000 × 1000 unités
+     *  — Graine fixe pour la reproductibilité
      * ------------------------------------------------------- */
-
-    /*
-     * Utilisation de l'arithmétique de pointeurs : (essaim + i)->champ
-     * Aucun crochet [] n'est utilisé.
-     * Les coordonnées sont générées dans un espace de 1000×1000×1000 unités.
-     */
-    srand(42);  /* Graine fixe pour la reproductibilité */
+    srand(42);
 
     int i;
     for (i = 0; i < n; i++) {
@@ -467,26 +434,16 @@ int main(void) {
     printf("[2/4] Initialisation : positions 3D aléatoires assignées\n");
 
     /* -------------------------------------------------------
-     *  ÉTAPE 3 : Tri par axe X (pré-requis du Divide & Conquer)
+     *  ÉTAPE 3 : Tri par axe X — pré-requis du Divide & Conquer
+     *  — Complexité : O(n log n)
      * ------------------------------------------------------- */
-
-    /*
-     * Le tri par X est INDISPENSABLE avant la récursion.
-     * Il permet de diviser l'espace en deux moitiés bien séparées
-     * et de concentrer les comparaisons sur les voisins réels.
-     * Complexité : O(n log n)
-     */
     quicksortX(essaim, essaim + n - 1);
     printf("[3/4] Tri par axe X terminé — O(n log n)\n");
 
     /* -------------------------------------------------------
      *  ÉTAPE 4 : Recherche de la paire la plus proche
+     *  — Complexité : O(n log²n)
      * ------------------------------------------------------- */
-
-    /*
-     * Application de l'algorithme Closest Pair of Points.
-     * Complexité : O(n log²n) — bien inférieure à O(n²) naïf.
-     */
     printf("[4/4] Recherche Divide & Conquer en cours...\n\n");
 
     PairResult resultat = closestPair(essaim, n);
@@ -494,7 +451,6 @@ int main(void) {
     /* -------------------------------------------------------
      *  AFFICHAGE DES RÉSULTATS
      * ------------------------------------------------------- */
-
     printf("============================================================\n");
     printf("  RÉSULTAT\n");
     printf("============================================================\n");
@@ -502,12 +458,13 @@ int main(void) {
     if (resultat.d1 != NULL && resultat.d2 != NULL) {
         printf("Drones les plus proches :\n");
         printf("  Drone #%d  → (x=%.1f, y=%.1f, z=%.1f)\n",
-               resultat.d1->id, resultat.d1->x, resultat.d1->y, resultat.d1->z);
+               resultat.d1->id,
+               resultat.d1->x, resultat.d1->y, resultat.d1->z);
         printf("  Drone #%d  → (x=%.1f, y=%.1f, z=%.1f)\n",
-               resultat.d2->id, resultat.d2->x, resultat.d2->y, resultat.d2->z);
+               resultat.d2->id,
+               resultat.d2->x, resultat.d2->y, resultat.d2->z);
         printf("  Distance minimale : %.6f m\n\n", resultat.dist);
 
-        /* Déclencher la manœuvre si la distance est critique */
         float SEUIL_CRITIQUE = 5.0f;
         printf("--- SYSTÈME D'ÉVITEMENT ---\n");
         manouvreEvitement(resultat.d1, resultat.d2, SEUIL_CRITIQUE);
@@ -518,9 +475,8 @@ int main(void) {
     /* -------------------------------------------------------
      *  LIBÉRATION DE LA MÉMOIRE
      * ------------------------------------------------------- */
-
     free(essaim);
-    essaim = NULL;  /* Bonne pratique : éviter les pointeurs fantômes */
+    essaim = NULL;
 
     printf("\n[OK] Mémoire libérée — Système en attente du prochain cycle\n");
 
@@ -536,7 +492,7 @@ int main(void) {
  *    Tri initial        : O(n log n)
  *    Récursion D&C      : T(n) = 2T(n/2) + O(n log n)
  *    Résolution Akra-B. : O(n log²n)
- *    → Gain vs naïf     : 50 000 000 ops  →  ~1 800 000 ops
+ *    → Gain vs naïf     : ~50 000 000 ops  →  ~1 800 000 ops
  * ============================================================
  */
 
